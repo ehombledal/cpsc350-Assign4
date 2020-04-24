@@ -4,7 +4,6 @@
 #include <fstream>
 
 Window *windows;
-int countedStudents;
 int totalStudents;
 int currTime = 0;
 int numWindows;
@@ -32,7 +31,6 @@ int parseFile(string file)
 
   inFS >> windowParse; //parses first line, always number of windows.
   int windowCount = stoi(windowParse);
-  cout << "window count is" << windowParse << endl;
   windows = new Window[windowCount];
 
   for (int i = 0; i < windowCount; ++i)
@@ -63,6 +61,7 @@ int parseFile(string file)
           Student *student = new Student(studentTimeHolder[i], stoi(tickParse));
           totalStudents++;
           studentsRemaining -> insert(*student);
+          cout << "adding student" << endl;
         }
       }
    }
@@ -83,12 +82,10 @@ void checkToEnter(int tick)
   while(topStudentTick == tick)
   {
     inLine -> insert(studentsRemaining -> remove());
-    countedStudents++;
     if (studentsRemaining -> isEmpty() == false)
     {
       topStudentTick = studentsRemaining ->peek().tickToAppear;
     } else {
-      cout << "all students have been added to line!" << endl;
       break;
     }
   }
@@ -114,11 +111,11 @@ void checkIfOpen(int currTime)
   {
     for (int i = 0; i < numWindows; ++i) //check if any windows are open
     {
-      if (windows[i].checkOccupied() == false)
+      if (windows[i].checkOccupied() == false && inLine -> isEmpty() == false)
       {
-        windows[i].changeToOccupied(inLine -> remove());  //puts student into window, gets all statistics
+        windows[i].changeToOccupied(inLine -> remove(), currTime);  //puts student into window, gets all statistics
         cout << "window " << i << " has been set to occupied" << endl;
-        break;
+        cout << "current student wait experienced is: " << windows[i].totalStudentWait << endl;
       }
     }
   }
@@ -126,11 +123,43 @@ void checkIfOpen(int currTime)
 
 void calculateStatistics()
 {
-  cout << "Mean Student Wait Time: " << << endl;
-  cout << "Median Student Wait Time: " << << endl;
-  cout << "Longest Student Wait: " << << endl;
-  cout << "Number of students waiting over 10 minutes: " << << endl;
-  cout << "Mean window idle: " << <<endl;  
+  int totalStudentWait = 0;
+  double meanStudentWait = 0;
+  int medianStudentWait = 0;
+  int longStudentWait = 0;
+  int numOverTen = 0;
+
+  int totalWindowIdle = 0;
+  double meanWindowIdle = 0;
+  int longWindowIdle = 0;
+  int numOverFive = 0;
+
+  for (int i = 0; i < numWindows; i++) //get them stats
+  {
+    totalStudentWait += windows[i].totalStudentWait;
+    if (windows[i].longestStudentWait > longStudentWait)
+    {
+      longStudentWait = windows[i].longestStudentWait;
+    }
+    numOverTen += windows[i].numOverTenMin;
+
+    totalWindowIdle += windows[i].totalIdleTime;
+    if (windows[i].largestIdle > longWindowIdle)
+    {
+      longWindowIdle = windows[i].largestIdle;
+    }
+    numOverFive += windows[i].numOverFiveMin;
+  }
+
+  meanStudentWait = (double)totalStudentWait / (double)totalStudents;
+  meanWindowIdle =  (double)totalWindowIdle / (double)numWindows;
+
+  cout << "Mean Student Wait Time: " << meanStudentWait << endl;
+  cout << "Longest Student Wait: " << longStudentWait << endl;
+  cout << "Number of students waiting over 10 minutes: " << numOverTen << endl;
+  cout << "Mean window idle: " << meanWindowIdle <<endl;
+  cout << "longest window idle: " << longWindowIdle <<endl;
+  cout << "Number of windows idling over 5 minutes: " << numOverFive <<endl;
   //printout of statistics go here.
   //mean student wait
   //median student wait
@@ -141,23 +170,39 @@ void calculateStatistics()
   //num of windows idled for over 5
 }
 
+bool windowsInUse()
+{
+  bool inUse = false;
+  for (int i = 0; i < numWindows; ++i)
+  {
+    if (windows[i].isOccupied == true)
+    {
+      inUse = true;
+    }
+  }
+  return inUse;
+}
 
 int main(int argc, char **argv)
 {
   string fileName = argv[1];
   parseFile(fileName); //puts students in list
+  checkToEnter(currTime); //pulls students from array based on tick and puts them into line, uses for loop
+
   //AT THIS POINT: Have a list of all students stored (studentsRemaining), with the tick they need to enter saved to them.
-  int i = 0;
-  while ( i < 20)
+  while (studentsRemaining -> isEmpty() == false || inLine -> isEmpty() == false || windowsInUse() == true)
   {
+    cout << endl;
+    cout << "current time: " << currTime <<endl;
+    cout << "students in line: " << inLine -> getSize() << endl;
+    cout << "students not here yet: " << studentsRemaining -> getSize() << endl;
+    cout << endl;
     //cout << "total students: " << totalStudents << "  countedStudents: " << countedStudents << endl;
     //cout << "checking students to enter line" << endl;
     checkToEnter(currTime); //pulls students from array based on tick and puts them into line, uses for loop
     checkIfDone(currTime); // checks if the people at the window finished this tick. Also calculates statistics
     checkIfOpen(currTime); //checks if a person is waiting. If there is, put them at a window!
     currTime++;
-    i++;
   }
-  cout << "got out of loop " << endl;
   calculateStatistics();
 }

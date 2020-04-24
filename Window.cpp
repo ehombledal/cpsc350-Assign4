@@ -5,16 +5,7 @@ Window::Window()
   isOccupied = false;
   idleTime = 0;
   largestIdle = 0;
-}
-
-int Window::checkCurrentIdle()
-{
-  return idleTime;
-}
-
-int Window::checkLargestIdle()
-{
-  return largestIdle;
+  tickWillComplete = 0;
 }
 
 bool Window::checkOccupied()
@@ -22,7 +13,7 @@ bool Window::checkOccupied()
   return isOccupied;
 }
 
-void Window::changeToOccupied(Student student)
+void Window::changeToOccupied(Student student, int currentTime)
 {
   //add statistics to pile
   //set do checks for idle time
@@ -30,12 +21,31 @@ void Window::changeToOccupied(Student student)
 
   isOccupied = true;
   currentStudent = student;
-  totalTime += idleTime;
+  totalStudentWait += currentTime - student.tickToAppear;
+  totalIdleTime += idleTime;
+
+  if (currentTime - student.tickToAppear > longestStudentWait)
+  {
+    longestStudentWait = currentTime - student.tickToAppear;
+  }
+
+  if (currentTime - student.tickToAppear > 10)
+  {
+    numOverTenMin++;
+  }
+
   if (idleTime > largestIdle)
   {
     largestIdle = idleTime;
     idleTime = 0;
   }
+
+  if (idleTime > 5)
+  {
+    numOverFiveMin++;
+  }
+
+
   tickWillComplete = student.tickToAppear + student.timeNeeded;
 
   //cout << "window is now occupied! Will finish on tick: " << tickWillComplete;
